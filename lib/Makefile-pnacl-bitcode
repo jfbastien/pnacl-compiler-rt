@@ -1,0 +1,35 @@
+# This Makefile builds the PNaCl version of compiler-rt (libgcc.a).
+#
+# This builds the *bitcode* version, for anything that the frontend
+# (clang) depends upon (not functions the backend translator depends upon).
+#
+# More information on the functions of libgcc can be found at:
+# http://gcc.gnu.org/onlinedocs/gccint/Libgcc.html#Libgcc
+# ../README.txt
+#
+# The following variables are expected to be set externally:
+
+# SRC_DIR
+# CC
+# AR
+# CFLAGS
+
+# pick up .c files from another dir
+vpath %.c ${SRC_DIR}
+
+FLOATING_POINT_COMPLEX=\
+divdc3.c divsc3.c \
+muldc3.c mulsc3.c
+
+SRCS=$(FLOATING_POINT_COMPLEX)
+
+EXTRA_FLAGS= -I${SRC_DIR}
+EXTRA_DEFINES= -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA_BIG_ENDIAN=0
+
+# overwrite default rule to make sure nothing unexpected happens.
+%.o : %.c
+	$(CC) -c $(CFLAGS) ${EXTRA_DEFINES} ${EXTRA_FLAGS} $< -o $@
+
+# The main target of this Makefile.
+libgcc.a: $(SRCS:.c=.o)
+	$(AR) rc $@ $^

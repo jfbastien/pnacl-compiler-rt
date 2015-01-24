@@ -1,0 +1,106 @@
+# This Makefile builds the PNaCl version of compiler-rt (libgcc.a).
+#
+# More information on the functions of libgcc can be found at:
+# http://gcc.gnu.org/onlinedocs/gccint/Libgcc.html#Libgcc
+# ../README.txt
+#
+# The following variables are expected to be set externally:
+
+# SRC_DIR
+# CC
+# AR
+# CFLAGS
+
+# pick up .c files from another dir
+vpath %.c ${SRC_DIR}
+
+
+# TODO(robertm): augment/prune this as we gain a better understanding of llc
+# http://code.google.com/p/nativeclient/issues/detail?id=842
+# http://code.google.com/p/nativeclient/issues/detail?id=821
+#
+# List of unused files in this directory with explanation:
+# (this is still quite incomplete, and there is overlap)
+#
+# 80-bit float complex data type "xc" omitted
+# divxc3.c mulxc3.c
+# 
+# 128 bit data type "ti":
+# fixdfti.c fixxfti.c fixsfti.c 
+# fixunsdfti.c fixunssfti.c fixunsxfti.c
+# floattidf.c floattisf.c floattixf.c
+# floatuntidf.c floatuntisf.c floatuntixf.c
+# udivti3.c  umodti3.c  modti3.c multi3.c divti3.c
+# powitf2.c
+#
+# 80 bit float type "x":
+# floatdixf.c floatundixf.c
+# fixunsxfdi.c fixunsxfsi.c fixunsxfti.c
+# fixxfdi.c fixxfsi.c
+# powixf2.c
+#
+# long double (ppc?):
+# powitf2.c
+#
+# Currently handled w/ native instructions:
+# ashldi.c ashrdi.c
+# cmp*.c ucmp*.c
+# clz*.c, ctz*.c ffs*.c parity*.c bswap*.c
+# lshrdi.c
+# neg*.c mul*.c
+#
+# misc:
+# gcc_personality_v0.c
+# apple_versioning.c
+# trampoline_setup.c
+# enable_execute_stack.c
+# clear_cache.c
+
+
+# List of used files:
+
+INTEGER_DIVISION_REMAINDER=\
+divdi3.c divsi3.c \
+udivdi3.c udivsi3.c \
+divmoddi4.c divmodsi4.c \
+udivmoddi4.c udivmodsi4.c \
+moddi3.c modsi3.c \
+umoddi3.c umodsi3.c
+
+FLOATING_POINT_COMPLEX=\
+divdc3.c divsc3.c \
+muldc3.c mulsc3.c
+
+FLOATING_POINT_ROUND_TOWARD_ZERO=\
+fixdfdi.c fixdfsi.c \
+fixsfdi.c fixsfsi.c \
+fixunsdfdi.c fixunsdfsi.c \
+fixunssfdi.c fixunssfsi.c
+
+FLOATING_POINT_ROUND_TOWARD_EVEN=\
+floatdidf.c floatdisf.c \
+floatsidf.c floatsisf.c \
+floatundidf.c floatundisf.c \
+floatunsidf.c floatunsisf.c
+
+FLOATING_POINT_POW=powisf2.c powidf2.c
+POPCOUNT=popcountsi2.c popcountdi2.c
+ATOMIC=atomic64.c
+
+SRCS=\
+$(INTEGER_DIVISION_REMAINDER) \
+$(FLOATING_POINT_COMPLEX) \
+$(FLOATING_POINT_ROUND_TOWARD_ZERO) \
+$(FLOATING_POINT_ROUND_TOWARD_EVEN) \
+$(FLOATING_POINT_POW) $(POPCOUNT) $(ATOMIC)
+
+EXTRA_FLAGS= -I${SRC_DIR}
+EXTRA_DEFINES= -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA_BIG_ENDIAN=0
+
+# overwrite default rule to make sure nothing unexpected happens.
+%.o : %.c
+	$(CC) -c $(CFLAGS) ${EXTRA_DEFINES} ${EXTRA_FLAGS} $< -o $@
+
+# The main target of this Makefile.
+libgcc.a: $(SRCS:.c=.o)
+	$(AR) rc $@ $^
