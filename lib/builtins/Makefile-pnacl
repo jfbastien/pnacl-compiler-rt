@@ -10,6 +10,7 @@
 # CC
 # AR
 # CFLAGS
+# ARCH
 
 # pick up .c files from another dir
 vpath %.c ${SRC_DIR}
@@ -86,13 +87,34 @@ floatunsidf.c floatunsisf.c
 FLOATING_POINT_POW=powisf2.c powidf2.c
 POPCOUNT=popcountsi2.c popcountdi2.c
 ATOMIC=atomic64.c
+OVERFLOW=mulodi4.c mulosi4.c
 
+
+# Platform independent runtime functions.
 SRCS=\
 $(INTEGER_DIVISION_REMAINDER) \
 $(FLOATING_POINT_COMPLEX) \
 $(FLOATING_POINT_ROUND_TOWARD_ZERO) \
 $(FLOATING_POINT_ROUND_TOWARD_EVEN) \
-$(FLOATING_POINT_POW) $(POPCOUNT) $(ATOMIC)
+$(FLOATING_POINT_POW) $(POPCOUNT)
+
+# Platform dependent runtime functions.
+ifeq ($(ARCH),x86-32)
+  SRCS+=
+else ifeq ($(ARCH),x86-64)
+  SRCS+=
+else ifeq ($(ARCH),arm)
+  SRCS+=$(OVERFLOW)
+else ifeq ($(ARCH),mips32)
+  SRCS+=$(ATOMIC)
+else ifeq ($(ARCH),x86-32-nonsfi)
+  SRCS+=
+else ifeq ($(ARCH),arm-nonsfi)
+  SRCS+=$(OVERFLOW)
+else
+  $(error "Unknown architecture $(ARCH)")
+endif
+
 
 EXTRA_FLAGS= -I${SRC_DIR}
 EXTRA_DEFINES= -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA_BIG_ENDIAN=0

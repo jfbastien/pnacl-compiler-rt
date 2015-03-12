@@ -17,12 +17,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/*
- * PNaCl only needs these on MIPS, since it lacks hardware 64-bit atomics,
- * unlike x86 and ARM.
- */
-#if defined(PNACL_mips32)
-
 #pragma redefine_extname __nacl_sync_fetch_and_add_8 __sync_fetch_and_add_8
 #pragma redefine_extname __nacl_sync_fetch_and_sub_8 __sync_fetch_and_sub_8
 #pragma redefine_extname __nacl_sync_fetch_and_and_8 __sync_fetch_and_and_8
@@ -244,5 +238,3 @@ void __nacl_sync_lock_release_8(volatile uint64_t *ptr) {
 
   __spin_unlock(&lock.lock);
 }
-
-#endif
