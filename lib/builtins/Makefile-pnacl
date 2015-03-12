@@ -100,15 +100,15 @@ $(FLOATING_POINT_POW) $(POPCOUNT)
 
 # Platform dependent runtime functions.
 ifeq ($(ARCH),x86-32)
-  SRCS+=
+  SRCS+=$(OVERFLOW)
 else ifeq ($(ARCH),x86-64)
   SRCS+=
 else ifeq ($(ARCH),arm)
   SRCS+=$(OVERFLOW)
 else ifeq ($(ARCH),mips32)
-  SRCS+=$(ATOMIC)
+  SRCS+=$(ATOMIC) $(OVERFLOW)
 else ifeq ($(ARCH),x86-32-nonsfi)
-  SRCS+=
+  SRCS+=$(OVERFLOW)
 else ifeq ($(ARCH),arm-nonsfi)
   SRCS+=$(OVERFLOW)
 else
