@@ -111,13 +111,15 @@ OverflowFunctions := mulodi4 mulosi4
 # TODO(dschuff): Port ARM AEABI function asm wrappers and switch to aeabi-style
 # function names. https://code.google.com/p/nativeclient/issues/detail?id=4140
 
+AEABIFunctions := aeabi_idivmod
+
 NaClCommonFunctions := $(IdivFunctions) $(FPComplexFunctions) \
 	               $(FPRoundToZeroFunctions) $(FPRoundToEvenFunctions) \
 	               $(FPPowFunctions) $(PopCountFunctions)
 
 FUNCTIONS.full-i386 := $(NaClCommonFunctions) $(OverflowFunctions)
 FUNCTIONS.full-x86_64 := $(NaClCommonFunctions)
-FUNCTIONS.full-arm := $(NaClCommonFunctions) $(OverflowFunctions)
+FUNCTIONS.full-arm := $(NaClCommonFunctions) $(OverflowFunctions) $(AEABIFunctions)
 
 # For now, do not use the assembly implementations because they haven't been
 # ported to NaCl.

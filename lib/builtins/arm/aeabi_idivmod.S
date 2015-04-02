@@ -19,10 +19,13 @@
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
         push    { lr }
+        SFI_SP \
         sub     sp, sp, #4
         mov     r2, sp
-        bl      SYMBOL_NAME(__divmodsi4)
+        SFI_BL  SYMBOL_NAME(__divmodsi4)
         ldr     r1, [sp]
+        SFI_SP \
         add     sp, sp, #4
-        pop     { pc }
+        pop     { lr }
+        SFI_BX  lr
 END_COMPILERRT_FUNCTION(__aeabi_idivmod)

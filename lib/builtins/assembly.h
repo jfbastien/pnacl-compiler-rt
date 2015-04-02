@@ -63,6 +63,24 @@
 #if !defined(__ARM_FEATURE_CLZ) &&                                             \
     (__ARM_ARCH >= 6 || (__ARM_ARCH == 5 && !defined(__ARM_ARCH_5__)))
 #define __ARM_FEATURE_CLZ
+
+/* LOCALMOD-START */
+#if defined(__native_client__)
+#define SFI_SP sfi_sp
+#define SFI_BREG sfi_breg reg
+#define SFI_BL sfi_bl
+#define SFI_BX sfi_bx
+#define ENTRY_P2ALIGN 4
+#define NACL_ALIGN .p2align ENTRY_P2ALIGN
+#else
+#define SFI_SP
+#define SFI_BREG
+#define SFI_BL bl
+#define SFI_BX bx
+#define ENTRY_P2ALIGN 2
+#define NACL_ALIGN
+#endif
+/* LOCALMOD-END */
 #endif
 
 #ifdef ARM_HAS_BX
@@ -100,6 +118,7 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
+  NACL_ALIGN                                                                   \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
