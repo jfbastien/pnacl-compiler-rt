@@ -48,7 +48,7 @@ CFLAGS := -Wall -Werror -O3 -fomit-frame-pointer -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA
 $(call CheckValue,CFLAGS)
 # Use the integrated assembler on x86-64 to ensure sandbox base-address hiding.
 CFLAGS.full-i386 := $(CFLAGS) -m32 -integrated-as
-CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as
+CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as -DCRT_HAS_128BIT
 # For now, disable special ARM naming and calling convention for these functions
 # See https://code.google.com/p/nativeclient/issues/detail?id=4140
 CFLAGS.full-arm := $(CFLAGS) -U__ARM_EABI__
@@ -72,15 +72,11 @@ PopCountFunctions := popcountsi2 popcountdi2
 # The following are used everywhere except x86-64:
 OverflowFunctions := mulodi4 mulosi4
 
-# TODO(dschuff) Add the following (only for x86-64?):
-# 128 bit data type "ti":
-# fixdfti.c fixsfti.c
-# fixunsdfti.c fixunssfti.c
-# floattidf.c floattisf.c floattixf.c
-# floatuntidf.c floatuntisf.c floatuntixf.c muloti4
-# udivti3  umodti3  modti3 multi3 divti3 popcountti2
 
-
+Int128Functions := fixdfti fixsfti fixunsdfti fixunssfti \
+                   floatuntidf floatuntisf floatuntixf muloti4 \
+                   floattidf floattisf floattixf udivmodti4 clzti2 ctzti2 \
+                   udivti3  umodti3  modti3 multi3 divti3 popcountti2
 
 # TODO(dschuff): maybe add some of the following. They are currently handled w/
 # native instructions but non-LLVM codegens might want them.
@@ -118,7 +114,7 @@ NaClCommonFunctions := $(IdivFunctions) $(FPComplexFunctions) \
 	               $(FPPowFunctions) $(PopCountFunctions)
 
 FUNCTIONS.full-i386 := $(NaClCommonFunctions) $(OverflowFunctions)
-FUNCTIONS.full-x86_64 := $(NaClCommonFunctions)
+FUNCTIONS.full-x86_64 := $(NaClCommonFunctions) $(Int128Functions)
 FUNCTIONS.full-arm := $(NaClCommonFunctions) $(OverflowFunctions) $(AEABIFunctions)
 
 # For now, do not use the assembly implementations because they haven't been
