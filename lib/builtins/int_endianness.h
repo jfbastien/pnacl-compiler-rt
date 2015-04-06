@@ -84,7 +84,8 @@
 
 /* .. */
 
-#if defined(__linux__)
+// @LOCALMOD
+#if defined(__linux__) || defined(__native_client__)
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define _YUGA_LITTLE_ENDIAN 0

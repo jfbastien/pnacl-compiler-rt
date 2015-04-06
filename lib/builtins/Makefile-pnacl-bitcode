@@ -24,11 +24,10 @@ muldc3.c mulsc3.c
 SRCS=$(FLOATING_POINT_COMPLEX)
 
 EXTRA_FLAGS= -I${SRC_DIR}
-EXTRA_DEFINES= -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA_BIG_ENDIAN=0
 
 # overwrite default rule to make sure nothing unexpected happens.
 %.o : %.c
-	$(CC) -c $(CFLAGS) ${EXTRA_DEFINES} ${EXTRA_FLAGS} $< -o $@
+	$(CC) -c $(CFLAGS) ${EXTRA_FLAGS} $< -o $@
 
 # The main target of this Makefile.
 libgcc.a: $(SRCS:.c=.o)

@@ -44,7 +44,7 @@ endif
 ###
 
 $(call CheckValue,CFLAGS)
-CFLAGS := -Wall -Werror -O3 -fomit-frame-pointer -D_YUGA_LITTLE_ENDIAN=1 -D_YUGA_BIG_ENDIAN=0 $(EXTRA_CFLAGS)
+CFLAGS := -Wall -Werror -O3 -fomit-frame-pointer $(EXTRA_CFLAGS)
 $(call CheckValue,CFLAGS)
 # Use the integrated assembler on x86-64 to ensure sandbox base-address hiding.
 CFLAGS.full-i386 := $(CFLAGS) -m32 -integrated-as
