@@ -52,13 +52,21 @@
 #define crt_fabsf(x) __builtin_fabsf((x))
 #define crt_fabsl(x) __builtin_fabsl((x))
 
-#define crt_fmax(x, y) __builtin_fmax((x), (y))
-#define crt_fmaxf(x, y) __builtin_fmaxf((x), (y))
-#define crt_fmaxl(x, y) __builtin_fmaxl((x), (y))
+// @LOCALMOD-START
+float __compilerrt_fmaxf(float x, float y);
+double __compilerrt_fmax(double x, double y);
 
-#define crt_logb(x) __builtin_logb((x))
-#define crt_logbf(x) __builtin_logbf((x))
-#define crt_logbl(x) __builtin_logbl((x))
+#define crt_fmax(x, y) __compilerrt_fmax((x), (y))
+#define crt_fmaxf(x, y) __compilerrt_fmaxf((x), (y))
+#define crt_fmaxl(x, y) __compilerrt_fmax((x), (y))
+
+float __compilerrt_logbf(float x);
+double __compilerrt_logb(double x);
+
+#define crt_logb(x) __compilerrt_logb((x))
+#define crt_logbf(x) __compilerrt_logbf((x))
+#define crt_logbl(x) __compilerrt_logb((x))
+// @LOCALMOD-END
 
 #define crt_scalbn(x, y) __builtin_scalbn((x), (y))
 #define crt_scalbnf(x, y) __builtin_scalbnf((x), (y))

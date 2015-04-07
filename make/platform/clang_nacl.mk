@@ -57,7 +57,11 @@ CFLAGS.full-arm := $(CFLAGS) -U__ARM_EABI__
 IdivFunctions := divdi3 divsi3 udivdi3 udivsi3 divmoddi4 divmodsi4 udivmoddi4 \
                  udivmodsi4 moddi3 modsi3 umoddi3 umodsi3
 
-FPComplexFunctions := divdc3 divsc3 muldc3 mulsc3
+# These are copies of a few libm functions, to avoid having to link
+# with libm for compiler-rt
+LibMFunctions := compilerrt_fmaxf compilerrt_fmax \
+                 compilerrt_logb compilerrt_logbf
+FPComplexFunctions := $(LibMFunctions) divdc3 divsc3 muldc3 mulsc3
 
 FPRoundToZeroFunctions := fixdfdi fixdfsi fixsfdi fixsfsi fixunsdfdi fixunsdfsi \
 		          fixunssfdi fixunssfsi

@@ -17,11 +17,13 @@
 # pick up .c files from another dir
 vpath %.c ${SRC_DIR}
 
+LIBM=compilerrt_logb.c compilerrt_logbf.c compilerrt_fmax.c compilerrt_fmaxf.c
+
 FLOATING_POINT_COMPLEX=\
 divdc3.c divsc3.c \
 muldc3.c mulsc3.c
 
-SRCS=$(FLOATING_POINT_COMPLEX)
+SRCS=$(LIBM) $(FLOATING_POINT_COMPLEX)
 
 EXTRA_FLAGS= -I${SRC_DIR}
 
