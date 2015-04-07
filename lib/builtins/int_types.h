@@ -57,7 +57,10 @@ typedef union
 } udwords;
 
 /* MIPS64 issue: PR 20098 */
-#if defined(__LP64__) && !(defined(__mips__) && defined(__clang__))
+// @LOCALMOD
+#if (defined(__LP64__) || \
+     (defined(__native_client__) && defined(__x86_64__))) \
+    && !(defined(__mips__) && defined(__clang__))
 #define CRT_HAS_128BIT
 #endif
 
@@ -141,4 +144,3 @@ typedef union
 } long_double_bits;
 
 #endif /* INT_TYPES_H */
-

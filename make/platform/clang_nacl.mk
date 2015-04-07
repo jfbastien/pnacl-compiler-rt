@@ -48,7 +48,7 @@ CFLAGS := -Wall -Werror -O3 -fomit-frame-pointer $(EXTRA_CFLAGS)
 $(call CheckValue,CFLAGS)
 # Use the integrated assembler on x86-64 to ensure sandbox base-address hiding.
 CFLAGS.full-i386 := $(CFLAGS) -m32 -integrated-as
-CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as -DCRT_HAS_128BIT
+CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as
 # For now, disable special ARM naming and calling convention for these functions
 # See https://code.google.com/p/nativeclient/issues/detail?id=4140
 CFLAGS.full-arm := $(CFLAGS) -U__ARM_EABI__
@@ -74,8 +74,8 @@ OverflowFunctions := mulodi4 mulosi4
 
 
 Int128Functions := fixdfti fixsfti fixunsdfti fixunssfti \
-                   floatuntidf floatuntisf floatuntixf muloti4 \
-                   floattidf floattisf floattixf udivmodti4 clzti2 ctzti2 \
+                   floatuntidf floatuntisf muloti4 \
+                   floattidf floattisf udivmodti4 clzti2 ctzti2 \
                    udivti3  umodti3  modti3 multi3 divti3 popcountti2
 
 # TODO(dschuff): maybe add some of the following. They are currently handled w/
@@ -95,7 +95,7 @@ Int128Functions := fixdfti fixsfti fixunsdfti fixunssfti \
 # Functions excluded:
 # 80 bit complex float: divxc3 mulxc3
 # 80 bit float: floatdixf floatundixf fixunsxfdi fixunsxfsi fixunsxfti
-#   fixxfdi fixxfsi fixxfti posixf2 powixf2 powitf2
+#   fixxfdi fixxfsi fixxfti posixf2 powixf2 powitf2 floattixf floatuntixf
 # PPC: powitf2 fixtfdi fixunstfdi floatditf floatunditf divtc3
 # gcc_personality_v0
 # apple_versioning
