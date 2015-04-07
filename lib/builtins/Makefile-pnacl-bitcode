@@ -34,3 +34,6 @@ EXTRA_FLAGS= -I${SRC_DIR}
 # The main target of this Makefile.
 libgcc.a: $(SRCS:.c=.o)
 	$(AR) rc $@ $^
+
+nacltest-pnacl:
+	test/builtins/Unit/nacltest.py $(TCROOT)/bin/pnacl-clang $(SRCS)

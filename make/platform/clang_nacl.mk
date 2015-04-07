@@ -127,3 +127,13 @@ OPTIMIZED := 0
 
 # We don't need to use visibility hidden on Linux.
 VISIBILITY_HIDDEN := 0
+
+nacltest-x86-32:
+	test/builtins/Unit/nacltest.py $(TCROOT)/bin/i686-nacl-clang \
+	 $(FUNCTIONS.full-i386)
+nacltest-x86-64:
+	test/builtins/Unit/nacltest.py $(TCROOT)/bin/x86_64-nacl-clang \
+	 $(FUNCTIONS.full-x86_64)
+nacltest-arm:
+	test/builtins/Unit/nacltest.py $(TCROOT)/bin/arm-nacl-clang \
+	 $(FUNCTIONS.full-arm)
