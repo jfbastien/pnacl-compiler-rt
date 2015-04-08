@@ -64,7 +64,7 @@ def main(argv):
     exe_suffix = '.pexe' if 'pnacl-clang' in cc else '.nexe'
     nexe = os.path.join(workdir, os.path.basename(test + exe_suffix))
     build_cmd = [cc, '-I' + inc_dir, '-o', nexe, test] + flags
-    run_cmd = [run_py, nexe]
+    run_cmd = [run_py, '-arch', 'env', nexe]
     try:
       print ' '.join(build_cmd)
       subprocess.check_call(build_cmd)
