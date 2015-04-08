@@ -23,6 +23,9 @@ vpath %.c ${SRC_DIR}
 # List of unused files in this directory with explanation:
 # (this is still quite incomplete, and there is overlap)
 #
+# Complex types omitted (libcalls for these are emitted by clang rather than
+# the backend, so they are included in a bitcode libgcc)
+# divdc3.c divsc3.c muldc3.c mulsc3.c
 # 80-bit float complex data type "xc" omitted
 # divxc3.c mulxc3.c
 # 
@@ -68,10 +71,6 @@ udivmoddi4.c udivmodsi4.c \
 moddi3.c modsi3.c \
 umoddi3.c umodsi3.c
 
-FLOATING_POINT_COMPLEX=\
-divdc3.c divsc3.c \
-muldc3.c mulsc3.c
-
 FLOATING_POINT_ROUND_TOWARD_ZERO=\
 fixdfdi.c fixdfsi.c \
 fixsfdi.c fixsfsi.c \
@@ -93,7 +92,6 @@ OVERFLOW=mulodi4.c mulosi4.c
 # Platform independent runtime functions.
 SRCS=\
 $(INTEGER_DIVISION_REMAINDER) \
-$(FLOATING_POINT_COMPLEX) \
 $(FLOATING_POINT_ROUND_TOWARD_ZERO) \
 $(FLOATING_POINT_ROUND_TOWARD_EVEN) \
 $(FLOATING_POINT_POW) $(POPCOUNT)
