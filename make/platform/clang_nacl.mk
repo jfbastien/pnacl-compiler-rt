@@ -49,9 +49,7 @@ $(call CheckValue,CFLAGS)
 # Use the integrated assembler on x86-64 to ensure sandbox base-address hiding.
 CFLAGS.full-i386 := $(CFLAGS) -m32 -integrated-as
 CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as
-# For now, disable special ARM naming and calling convention for these functions
-# See https://code.google.com/p/nativeclient/issues/detail?id=4140
-CFLAGS.full-arm := $(CFLAGS) -U__ARM_EABI__
+CFLAGS.full-arm := $(CFLAGS)
 
 # The following are common to all platforms and are also included in PNaCl:
 IdivFunctions := divdi3 divsi3 udivdi3 udivsi3 divmoddi4 divmodsi4 udivmoddi4 \
@@ -108,10 +106,17 @@ Int128Functions := fixdfti fixsfti fixunsdfti fixunssfti \
 # clear_cache
 # eprintf
 
-# TODO(dschuff): Port ARM AEABI function asm wrappers and switch to aeabi-style
-# function names. https://code.google.com/p/nativeclient/issues/detail?id=4140
-
-AEABIFunctions := aeabi_idivmod
+# ARM helper functions defined by EABI
+# Note that there are many other aeabi functions that get defined as aliases to
+# functions included in other categories. This list only inlcludes functions
+# that have their own separate implementations.
+# We leave out the soft-float routines, since the soft-float routines above are
+# also left out, and NaCl requires VFP (this will also help ensure we don't
+# accidentally start depending on them):
+# aeabi_dcmp aeabi_fcmp
+AEABIFunctions := aeabi_div0 aeabi_idivmod aeabi_ldivmod \
+	          aeabi_memcmp aeabi_memcpy aeabi_memmove aeabi_memset \
+		  aeabi_uidivmod aeabi_uldivmod
 
 NaClCommonFunctions := $(IdivFunctions) $(FPComplexFunctions) \
 	               $(FPRoundToZeroFunctions) $(FPRoundToEvenFunctions) \

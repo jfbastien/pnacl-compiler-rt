@@ -20,12 +20,15 @@
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ldivmod)
         push    {r11, lr}
+        SFI_SP \
         sub     sp, sp, #16
         add     r12, sp, #8
         str     r12, [sp]
-        bl      SYMBOL_NAME(__divmoddi4)
+        SFI_BL  SYMBOL_NAME(__divmoddi4)
         ldr     r2, [sp, #8]
         ldr     r3, [sp, #12]
+        SFI_SP \
         add     sp, sp, #16
-        pop     {r11, pc}
+        pop     {r11, lr}
+        SFI_BX  lr
 END_COMPILERRT_FUNCTION(__aeabi_ldivmod)
