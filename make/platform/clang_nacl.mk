@@ -8,10 +8,10 @@ Configs :=
 
 # We don't currently have any general purpose way to target architectures other
 # than the compiler defaults (because there is no generalized way to invoke
-# cross compilers). For now, we just find the target archicture of the compiler
+# cross compilers). For now, we just find the target architecture of the compiler
 # and only define configurations we know that compiler can generate.
 CompilerTargetTriple := $(shell \
-	$(CC) -v 2>&1 | grep 'Target:' | cut -d' ' -f2)
+	$(CC) $(EXTRA_CFLAGS) -v 2>&1 | grep 'Target:' | cut -d' ' -f2)
 ifneq ($(DEBUGMAKE),)
 ifeq ($(CompilerTargetTriple),)
 $(error "unable to infer compiler target triple for $(CC)")
@@ -23,6 +23,14 @@ $(call CheckValue,CompilerTargetTriple)
 # Only define configs if we detected a nacl target.
 ifneq ($(findstring -nacl,$(CompilerTargetTriple)),)
 
+ifneq ($(findstring pnacl-clang,$(CC)),)
+# pnacl-clang already uses the integrated assembler and does not support the
+# integrated-as flag
+INTEGRATED_AS :=
+else
+INTEGRATED_AS := -integrated-as
+endif
+
 # Configurations which just include all the runtime functions.
 ifeq ($(call contains,i686,$(CompilerTargetArch)),true)
 Configs += full-i386
@@ -33,8 +41,21 @@ Configs += full-x86_64
 Arch.full-x86_64 := x86_64
 else
 ifeq ($(call contains,arm,$(CompilerTargetArch)),true)
+# arm-nacl-clang reports this target
 Configs += full-arm
 Arch.full-arm := armv7
+else
+ifeq ($(call contains,armv7,$(CompilerTargetArch)),true)
+# pnacl-clang with arm bias (used for arm-nonsfi) reports this target
+Configs += full-arm
+Arch.full-arm := armv7
+else
+ifeq ($(call contains,le32,$(CompilerTargetArch)),true)
+# This is really for mips, but mips uses le32 bitcode
+Configs += full-mips32
+Arch.full-mips32 := mips32
+endif
+endif
 endif
 endif
 endif
@@ -47,9 +68,11 @@ $(call CheckValue,CFLAGS)
 CFLAGS := -Wall -Werror -O3 -fomit-frame-pointer $(EXTRA_CFLAGS)
 $(call CheckValue,CFLAGS)
 # Use the integrated assembler on x86-64 to ensure sandbox base-address hiding.
-CFLAGS.full-i386 := $(CFLAGS) -m32 -integrated-as
-CFLAGS.full-x86_64 := $(CFLAGS) -m64 -integrated-as
+
+CFLAGS.full-x86_64 := $(CFLAGS) -m64 $(INTEGRATED_AS)
 CFLAGS.full-arm := $(CFLAGS)
+CFLAGS.full-i386 := $(CFLAGS) -m32 $(INTEGRATED_AS)
+
 
 # The following are common to all platforms and are also included in PNaCl:
 IdivFunctions := divdi3 divsi3 udivdi3 udivsi3 divmoddi4 divmodsi4 udivmoddi4 \
@@ -118,13 +141,19 @@ AEABIFunctions := aeabi_div0 aeabi_idivmod aeabi_ldivmod \
 	          aeabi_memcmp aeabi_memcpy aeabi_memmove aeabi_memset \
 		  aeabi_uidivmod aeabi_uldivmod
 
+# Mips/portability functions
+MipsFunctions := atomic64
+
 NaClCommonFunctions := $(IdivFunctions) $(FPComplexFunctions) \
 	               $(FPRoundToZeroFunctions) $(FPRoundToEvenFunctions) \
 	               $(FPPowFunctions) $(PopCountFunctions)
 
 FUNCTIONS.full-i386 := $(NaClCommonFunctions) $(OverflowFunctions)
 FUNCTIONS.full-x86_64 := $(NaClCommonFunctions) $(Int128Functions)
-FUNCTIONS.full-arm := $(NaClCommonFunctions) $(OverflowFunctions) $(AEABIFunctions)
+FUNCTIONS.full-arm := $(NaClCommonFunctions) $(OverflowFunctions) \
+	              $(AEABIFunctions)
+FUNCTIONS.full-mips32 := $(NaClCommonFunctions) $(OverflowFunctions) \
+                         $(MipsFunctions)
 
 # For now, do not use the assembly implementations because they haven't been
 # ported to NaCl.

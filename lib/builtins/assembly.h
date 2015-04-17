@@ -65,7 +65,7 @@
 #define __ARM_FEATURE_CLZ
 
 /* LOCALMOD-START */
-#if defined(__native_client__)
+#if defined(__native_client__) && !defined(__native_client_nonsfi__)
 #define SFI_SP sfi_sp
 #define SFI_BREG sfi_breg reg
 #define SFI_BL sfi_bl
@@ -77,7 +77,6 @@
 #define SFI_BREG
 #define SFI_BL bl
 #define SFI_BX bx
-#define ENTRY_P2ALIGN 2
 #define NACL_ALIGN
 #endif
 /* LOCALMOD-END */
