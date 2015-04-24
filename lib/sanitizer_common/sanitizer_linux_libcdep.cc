@@ -15,6 +15,7 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX
 
+#include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_freebsd.h"
@@ -22,8 +23,6 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
-#include "sanitizer_atomic.h"
-#include "sanitizer_symbolizer.h"
 
 #if SANITIZER_ANDROID || SANITIZER_FREEBSD
 #include <dlfcn.h>  // for dlsym()
@@ -58,8 +57,10 @@ real_pthread_attr_getstack(void *attr, void **addr, size_t *size);
 }  // extern "C"
 
 static int my_pthread_attr_getstack(void *attr, void **addr, size_t *size) {
-  if (real_pthread_attr_getstack)
+#if !SANITIZER_GO
+  if (&real_pthread_attr_getstack)
     return real_pthread_attr_getstack((pthread_attr_t *)attr, addr, size);
+#endif
   return pthread_attr_getstack((pthread_attr_t *)attr, addr, size);
 }
 
@@ -67,8 +68,10 @@ SANITIZER_WEAK_ATTRIBUTE int
 real_sigaction(int signum, const void *act, void *oldact);
 
 int internal_sigaction(int signum, const void *act, void *oldact) {
-  if (real_sigaction)
+#if !SANITIZER_GO
+  if (&real_sigaction)
     return real_sigaction(signum, act, oldact);
+#endif
   return sigaction(signum, (const struct sigaction *)act,
                    (struct sigaction *)oldact);
 }
@@ -120,6 +123,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   *stack_bottom = (uptr)stackaddr;
 }
 
+#if !SANITIZER_GO
 bool SetEnv(const char *name, const char *value) {
   void *f = dlsym(RTLD_NEXT, "setenv");
   if (f == 0)
@@ -130,6 +134,7 @@ bool SetEnv(const char *name, const char *value) {
   internal_memcpy(&setenv_f, &f, sizeof(f));
   return setenv_f(name, value, 1) == 0;
 }
+#endif
 
 bool SanitizerSetThreadName(const char *name) {
 #ifdef PR_SET_NAME
@@ -162,8 +167,22 @@ static uptr g_tls_size;
 # define DL_INTERNAL_FUNCTION
 #endif
 
+#if defined(__mips__)
+// TlsPreTcbSize includes size of struct pthread_descr and size of tcb
+// head structure. It lies before the static tls blocks.
+static uptr TlsPreTcbSize() {
+  const uptr kTcbHead = 16;
+  const uptr kTlsAlign = 16;
+  const uptr kTlsPreTcbSize =
+    (ThreadDescriptorSize() + kTcbHead + kTlsAlign - 1) & ~(kTlsAlign - 1);
+  InitTlsSize();
+  g_tls_size = (g_tls_size + kTlsPreTcbSize + kTlsAlign -1) & ~(kTlsAlign - 1);
+  return kTlsPreTcbSize;
+}
+#endif
+
 void InitTlsSize() {
-#if !SANITIZER_FREEBSD && !SANITIZER_ANDROID
+#if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO
   typedef void (*get_tls_func)(size_t*, size_t*) DL_INTERNAL_FUNCTION;
   get_tls_func get_tls;
   void *get_tls_static_info_ptr = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
@@ -178,7 +197,8 @@ void InitTlsSize() {
 #endif  // !SANITIZER_FREEBSD && !SANITIZER_ANDROID
 }
 
-#if (defined(__x86_64__) || defined(__i386__)) && SANITIZER_LINUX
+#if (defined(__x86_64__) || defined(__i386__) || defined(__mips__)) \
+    && SANITIZER_LINUX
 // sizeof(struct thread) from glibc.
 static atomic_uintptr_t kThreadDescriptorSize;
 
@@ -186,6 +206,7 @@ uptr ThreadDescriptorSize() {
   uptr val = atomic_load(&kThreadDescriptorSize, memory_order_relaxed);
   if (val)
     return val;
+#if defined(__x86_64__) || defined(__i386__)
 #ifdef _CS_GNU_LIBC_VERSION
   char buf[64];
   uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
@@ -218,6 +239,13 @@ uptr ThreadDescriptorSize() {
     return val;
   }
 #endif
+#elif defined(__mips__)
+  // TODO(sagarthakur): add more values as per different glibc versions.
+  val = FIRST_32_SECOND_64(1152, 1776);
+  if (val)
+    atomic_store(&kThreadDescriptorSize, val, memory_order_relaxed);
+  return val;
+#endif
   return 0;
 }
 
@@ -234,12 +262,24 @@ uptr ThreadSelf() {
   asm("mov %%gs:%c1,%0" : "=r"(descr_addr) : "i"(kThreadSelfOffset));
 # elif defined(__x86_64__)
   asm("mov %%fs:%c1,%0" : "=r"(descr_addr) : "i"(kThreadSelfOffset));
+# elif defined(__mips__)
+  // MIPS uses TLS variant I. The thread pointer (in hardware register $29)
+  // points to the end of the TCB + 0x7000. The pthread_descr structure is
+  // immediately in front of the TCB. TlsPreTcbSize() includes the size of the
+  // TCB and the size of pthread_descr.
+  const uptr kTlsTcbOffset = 0x7000;
+  uptr thread_pointer;
+  asm volatile(".set push;\
+                .set mips64r2;\
+                rdhwr %0,$29;\
+                .set pop" : "=r" (thread_pointer));
+  descr_addr = thread_pointer - kTlsTcbOffset - TlsPreTcbSize();
 # else
 #  error "unsupported CPU arch"
 # endif
   return descr_addr;
 }
-#endif  // (defined(__x86_64__) || defined(__i386__)) && SANITIZER_LINUX
+#endif  // (x86_64 || i386 || MIPS) && SANITIZER_LINUX
 
 #if SANITIZER_FREEBSD
 static void **ThreadSelfSegbase() {
@@ -261,6 +301,7 @@ uptr ThreadSelf() {
 }
 #endif  // SANITIZER_FREEBSD
 
+#if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
 #if SANITIZER_LINUX
 # if defined(__x86_64__) || defined(__i386__)
@@ -268,6 +309,9 @@ static void GetTls(uptr *addr, uptr *size) {
   *size = GetTlsSize();
   *addr -= *size;
   *addr += ThreadDescriptorSize();
+# elif defined(__mips__)
+  *addr = ThreadSelf();
+  *size = GetTlsSize();
 # else
   *addr = 0;
   *size = 0;
@@ -289,7 +333,9 @@ static void GetTls(uptr *addr, uptr *size) {
 # error "Unknown OS"
 #endif
 }
+#endif
 
+#if !SANITIZER_GO
 uptr GetTlsSize() {
 #if SANITIZER_FREEBSD
   uptr addr, size;
@@ -299,9 +345,14 @@ uptr GetTlsSize() {
   return g_tls_size;
 #endif
 }
+#endif
 
 void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
                           uptr *tls_addr, uptr *tls_size) {
+#if SANITIZER_GO
+  // Stub implementation for Go.
+  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+#else
   GetTls(tls_addr, tls_size);
 
   uptr stack_top, stack_bottom;
@@ -318,6 +369,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
       *tls_addr = *stk_addr + *stk_size;
     }
   }
+#endif
 }
 
 void AdjustStackSize(void *attr_) {
@@ -384,9 +436,8 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
     return 0;
   if (data->filter && !data->filter(module_name.data()))
     return 0;
-  void *mem = &data->modules[data->current_n];
-  LoadedModule *cur_module = new(mem) LoadedModule(module_name.data(),
-                                                   info->dlpi_addr);
+  LoadedModule *cur_module = &data->modules[data->current_n];
+  cur_module->set(module_name.data(), info->dlpi_addr);
   data->current_n++;
   for (int i = 0; i < info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
@@ -409,17 +460,43 @@ uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
 }
 #endif  // SANITIZER_ANDROID
 
-void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
-  // Some kinds of sandboxes may forbid filesystem access, so we won't be able
-  // to read the file mappings from /proc/self/maps. Luckily, neither the
-  // process will be able to load additional libraries, so it's fine to use the
-  // cached mappings.
-  MemoryMappingLayout::CacheMemoryMappings();
-  // Same for /proc/self/exe in the symbolizer.
-#if !SANITIZER_GO
-  Symbolizer::GetOrInit()->PrepareForSandboxing();
-  CovPrepareForSandboxing(args);
-#endif
+// getrusage does not give us the current RSS, only the max RSS.
+// Still, this is better than nothing if /proc/self/statm is not available
+// for some reason, e.g. due to a sandbox.
+static uptr GetRSSFromGetrusage() {
+  struct rusage usage;
+  if (getrusage(RUSAGE_SELF, &usage))  // Failed, probably due to a sandbox.
+    return 0;
+  return usage.ru_maxrss << 10;  // ru_maxrss is in Kb.
+}
+
+uptr GetRSS() {
+  if (!common_flags()->can_use_proc_maps_statm)
+    return GetRSSFromGetrusage();
+  fd_t fd = OpenFile("/proc/self/statm", RdOnly);
+  if (fd == kInvalidFd)
+    return GetRSSFromGetrusage();
+  char buf[64];
+  uptr len = internal_read(fd, buf, sizeof(buf) - 1);
+  internal_close(fd);
+  if ((sptr)len <= 0)
+    return 0;
+  buf[len] = 0;
+  // The format of the file is:
+  // 1084 89 69 11 0 79 0
+  // We need the second number which is RSS in pages.
+  char *pos = buf;
+  // Skip the first number.
+  while (*pos >= '0' && *pos <= '9')
+    pos++;
+  // Skip whitespaces.
+  while (!(*pos >= '0' && *pos <= '9') && *pos != 0)
+    pos++;
+  // Read the number.
+  uptr rss = 0;
+  while (*pos >= '0' && *pos <= '9')
+    rss = rss * 10 + *pos++ - '0';
+  return rss * GetPageSizeCached();
 }
 
 }  // namespace __sanitizer

@@ -47,6 +47,10 @@ void RegisterTsanFlags(FlagParser *parser, Flags *f) {
   RegisterFlag(parser, #Name, Description, &f->Name);
 #include "tsan_flags.inc"
 #undef TSAN_FLAG
+  // DDFlags
+  RegisterFlag(parser, "second_deadlock_stack",
+      "Report where each mutex is locked in deadlock reports",
+      &f->second_deadlock_stack);
 }
 
 void InitializeFlags(Flags *f, const char *env) {
@@ -62,7 +66,9 @@ void InitializeFlags(Flags *f, const char *env) {
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
     cf.allow_addr2line = true;
+#ifndef SANITIZER_GO
     cf.detect_deadlocks = true;
+#endif
     cf.print_suppressions = false;
     cf.stack_trace_format = "    #%n %f %S %M";
     OverrideCommonFlags(cf);

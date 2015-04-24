@@ -302,12 +302,12 @@ dfsan_dump_labels(int fd) {
     char buf[64];
     internal_snprintf(buf, sizeof(buf), "%u %u %u ", l,
                       __dfsan_label_info[l].l1, __dfsan_label_info[l].l2);
-    internal_write(fd, buf, internal_strlen(buf));
+    WriteToFile(fd, buf, internal_strlen(buf));
     if (__dfsan_label_info[l].l1 == 0 && __dfsan_label_info[l].desc) {
-      internal_write(fd, __dfsan_label_info[l].desc,
-                     internal_strlen(__dfsan_label_info[l].desc));
+      WriteToFile(fd, __dfsan_label_info[l].desc,
+                  internal_strlen(__dfsan_label_info[l].desc));
     }
-    internal_write(fd, "\n", 1);
+    WriteToFile(fd, "\n", 1);
   }
 }
 
@@ -317,23 +317,23 @@ void Flags::SetDefaults() {
 #undef DFSAN_FLAG
 }
 
-void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
+static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) \
   RegisterFlag(parser, #Name, Description, &f->Name);
 #include "dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
-static void InitializeFlags(Flags &f, const char *env) {
+static void InitializeFlags() {
   FlagParser parser;
-  RegisterDfsanFlags(&parser, &f);
-  f.SetDefaults();
-  parser.ParseString(env);
+  RegisterDfsanFlags(&parser, &flags());
+  flags().SetDefaults();
+  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
 }
 
 static void dfsan_fini() {
   if (internal_strcmp(flags().dump_labels_at_exit, "") != 0) {
-    fd_t fd = OpenFile(flags().dump_labels_at_exit, true /* write */);
+    fd_t fd = OpenFile(flags().dump_labels_at_exit, WrOnly);
     if (fd == kInvalidFd) {
       Report("WARNING: DataFlowSanitizer: unable to open output file %s\n",
              flags().dump_labels_at_exit);
@@ -343,7 +343,7 @@ static void dfsan_fini() {
     Report("INFO: DataFlowSanitizer: dumping labels to %s\n",
            flags().dump_labels_at_exit);
     dfsan_dump_labels(fd);
-    internal_close(fd);
+    CloseFile(fd);
   }
 }
 
@@ -361,10 +361,9 @@ static void dfsan_init(int argc, char **argv, char **envp) {
   // case by disabling memory protection when ASLR is disabled.
   uptr init_addr = (uptr)&dfsan_init;
   if (!(init_addr >= kUnusedAddr && init_addr < kAppAddr))
-    Mprotect(kUnusedAddr, kAppAddr - kUnusedAddr);
+    MmapNoAccess(kUnusedAddr, kAppAddr - kUnusedAddr);
 
-  InitializeFlags(flags(), GetEnv("DFSAN_OPTIONS"));
-
+  InitializeFlags();
   InitializeInterceptors();
 
   // Register the fini callback to run when the program terminates successfully
