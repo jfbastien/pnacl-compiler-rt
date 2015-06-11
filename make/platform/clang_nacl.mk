@@ -52,8 +52,15 @@ Arch.full-arm := armv7
 else
 ifeq ($(call contains,le32,$(CompilerTargetArch)),true)
 # This is really for mips, but mips uses le32 bitcode
+# TODO(petarj): Remove this if possible.
 Configs += full-mips32
 Arch.full-mips32 := mips32
+else
+ifeq ($(call contains,mipsel,$(CompilerTargetArch)),true)
+# This is for mips d2n
+Configs += full-mips32
+Arch.full-mips32 := mips32
+endif
 endif
 endif
 endif
