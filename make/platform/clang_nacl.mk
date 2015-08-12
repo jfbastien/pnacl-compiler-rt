@@ -20,8 +20,6 @@ endif
 
 CompilerTargetArch := $(firstword $(subst -, ,$(CompilerTargetTriple)))
 $(call CheckValue,CompilerTargetTriple)
-# Only define configs if we detected a nacl target.
-ifneq ($(findstring -nacl,$(CompilerTargetTriple)),)
 
 ifneq ($(findstring pnacl-clang,$(CC)),)
 # pnacl-clang already uses the integrated assembler and does not support the
@@ -40,13 +38,7 @@ ifeq ($(call contains,x86_64,$(CompilerTargetArch)),true)
 Configs += full-x86_64
 Arch.full-x86_64 := x86_64
 else
-ifeq ($(call contains,arm,$(CompilerTargetArch)),true)
-# arm-nacl-clang reports this target
-Configs += full-arm
-Arch.full-arm := armv7
-else
-ifeq ($(call contains,armv7,$(CompilerTargetArch)),true)
-# pnacl-clang with arm bias (used for arm-nonsfi) reports this target
+ifeq ($(call contains,arm armv7 armv7a,$(CompilerTargetArch)),true)
 Configs += full-arm
 Arch.full-arm := armv7
 else
@@ -60,7 +52,6 @@ ifeq ($(call contains,mipsel,$(CompilerTargetArch)),true)
 # This is for mips d2n
 Configs += full-mips32
 Arch.full-mips32 := mips32
-endif
 endif
 endif
 endif
